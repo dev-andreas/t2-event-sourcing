@@ -33,7 +33,7 @@ public class PaxosIncSim implements Runnable {
 
             // save a checkpoint every 420th event
             if (i % 420 == 0) {
-                BankingBackend.getInstance().saveCheckpoint();
+                BankingBackend.getInstance().saveCheckpoint(employees);
             }
 
             // after 30k commands the system is suddenly cut from power and loses all state
@@ -77,7 +77,7 @@ public class PaxosIncSim implements Runnable {
         System.err.println("Restarting systems...");
 
         System.err.println("Restoring last saved system state...");
-        BankingBackend.getInstance().restoreCheckpoint();
+        BankingBackend.getInstance().restoreCheckpoint(employees);
 
         System.err.println("Restore successful; global balance=" + Util.formatCurrency(BankingBackend.getInstance().getGlobalBalance()));
         System.err.println("Continuing normal operation.");

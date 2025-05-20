@@ -4,12 +4,26 @@ import org.pgi.paxoscoin.commands.Command;
 import org.pgi.paxoscoin.commands.PayWageCommand;
 import org.pgi.paxoscoin.commands.ReadCardCommand;
 import org.pgi.paxoscoin.exceptions.UnsupportedCommandException;
+import org.pgi.paxoscoin.worldmodel.Employee;
+
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 
 /**
  * The banking backend.
  */
 public class BankingBackend {
+
+    private static String ACCOUNT_BALANCES_FILE = "persistence/account_balances.csv";
+    private static String GLOBAL_BALANCE_FILE = "persistence/global_balance.csv";
+
     private static BankingBackend instance;
     
     private double globalBalance;
@@ -89,17 +103,65 @@ public class BankingBackend {
     /**
      * Saves a checkpoint of the system state (i.e. the accounts and the current global balance) to the hard drive
      */
-    public void saveCheckpoint() {
+    public void saveCheckpoint(Map<UUID, Employee> employees) {
+
         // TODO: save a current checkpoint of all accounts to a file
         // the choice of format is completely up to you,
         // but has to match the restore logic in the restoreCheckpoint method
+
+        // persist global balance
+        try {
+            Files.writeString(Path.of(GLOBAL_BALANCE_FILE), "" + globalBalance, StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        // persist accounts
+        try (FileWriter writer = new FileWriter(ACCOUNT_BALANCES_FILE, StandardCharsets.UTF_8)) {
+            // Write header
+            writer.append("Employee,Balance\n");
+
+            employees.forEach((key, value) -> {
+                String line = value.getId() + "," + value.getAccount().getBalance() + "\n";
+                try {
+                    writer.append(line);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
-     * Restores a checkpoint that was saved with {@link #saveCheckpoint()}
+     * Restores a checkpoint that was saved with {@link #saveCheckpoint(Map)}
      */
-    public void restoreCheckpoint() {
+    public void restoreCheckpoint(Map<UUID, Employee> employees) {
         // TODO: restore the last saved checkpoint
-        throw new RuntimeException("Restore is not implemented!");
+
+        // restore global balance
+        try {
+            List<String> globalBalance = Files.readAllLines(Path.of(GLOBAL_BALANCE_FILE), StandardCharsets.UTF_8);
+            this.globalBalance = Double.parseDouble(globalBalance.getFirst());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        // restore accounts
+        try {
+            List<String> accounts = Files.readAllLines(Path.of(ACCOUNT_BALANCES_FILE), StandardCharsets.UTF_8);
+            accounts.forEach(account -> {
+                String[] data = account.split(",");
+                UUID uuid = UUID.fromString(data[0]);
+                double balance = Double.parseDouble(data[1]);
+
+                Employee employee = employees.get(uuid);
+                employee.setAccount(new Account(employee, balance));
+            });
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

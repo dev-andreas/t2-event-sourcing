@@ -1,0 +1,4 @@
+Employees can cheat the system by purchasing something after the last checkpoint before the system crashes.
+This purchase won’t be persisted in the storage, and when the crash occurs, the purchase will be reset.
+However, to achieve this, employees must be aware that a crash will happen beforehand.
+For example, they could observe when the robot plugs itself in and do the purchase right before.
