@@ -9,7 +9,7 @@ java {
 
 version = '1.0'
 
-ext {
+run {
     mainClassName = "org.pgi.paxoscoin.Main"
 }
 

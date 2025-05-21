@@ -1,5 +1,6 @@
 package org.pgi.paxoscoin.banking;
 
+import org.pgi.paxoscoin.Util;
 import org.pgi.paxoscoin.commands.Command;
 import org.pgi.paxoscoin.commands.PayWageCommand;
 import org.pgi.paxoscoin.commands.ReadCardCommand;
@@ -65,17 +66,22 @@ public class BankingBackend {
             PayWageCommand pwcommand = (PayWageCommand) command;
             pwcommand.getEmployee().getAccount().deposit(pwcommand.getAmount());
             this.globalBalance += pwcommand.getAmount();
-
-            ChangedBalanceEvent event = new ChangedBalanceEvent(
-                    pwcommand.getEmployee().getId(),
-                    null, // command has no id
-                    TransactionType.DEPOSIT,
-                    pwcommand.getAmount());
-            EventLog.persist(event);
-            // TODO: create ChangedBalanceEvent
+            if(Util.EXERCISE_NUMBER == 3 || Util.EXERCISE_NUMBER == 4) {
+                ChangedBalanceEvent event = new ChangedBalanceEvent(
+                        pwcommand.getEmployee().getId(),
+                        null, // command has no id
+                        TransactionType.DEPOSIT,
+                        pwcommand.getAmount());
+                EventLog.persist(event);
+                // TODO: create ChangedBalanceEvent
+            }
 
         } else if(command instanceof ReadCardCommand) {
             ReadCardCommand rccommand = (ReadCardCommand) command;
+
+            // FIX for the card exploit
+            //if(rccommand.getAmount() < 0) rccommand = new ReadCardCommand(rccommand.getTerminal(), rccommand.getCard(), rccommand.getTime(), -rccommand.getAmount());
+
             // reject any read card commands, if the current account balance is not sufficing
             if (rccommand.getAmount() > rccommand.getCard().getEmployee().getAccount().getBalance()) {
                 System.err.println(rccommand.getCard().getEmployee().getName() + " just tried to overdraw their account!");
@@ -83,14 +89,15 @@ public class BankingBackend {
             }
             rccommand.getCard().getEmployee().getAccount().withdraw(rccommand.getAmount());
             this.globalBalance -= rccommand.getAmount();
-
-            ChangedBalanceEvent event = new ChangedBalanceEvent(
-                    rccommand.getCard().getEmployee().getId(),
-                    rccommand.getTerminal().getId(),
-                    TransactionType.WITHDRAW,
-                    rccommand.getAmount());
-            EventLog.persist(event);
-            // TODO: create ChagedBalanceEvent
+            if(Util.EXERCISE_NUMBER == 3 || Util.EXERCISE_NUMBER == 4) {
+                ChangedBalanceEvent event = new ChangedBalanceEvent(
+                        rccommand.getCard().getEmployee().getId(),
+                        rccommand.getTerminal().getId(),
+                        TransactionType.WITHDRAW,
+                        rccommand.getAmount());
+                EventLog.persist(event);
+                // TODO: create ChagedBalanceEvent
+            }
         } else {
             throw new UnsupportedCommandException();
         }
@@ -151,55 +158,56 @@ public class BankingBackend {
     public void restoreCheckpoint(Map<UUID, Employee> employees) {
         // TODO: restore the last saved checkpoint
 
-        // solution for subtask 3
+        // solution for subtask 3/4
+        if(Util.EXERCISE_NUMBER == 3 || Util.EXERCISE_NUMBER == 4) {
+            List<Event> events = EventLog.restoreEvent();
 
-        List<Event> events = EventLog.restoreEvent();
+            employees.values().forEach(employee -> employee.setAccount(new Account(employee, 0)));
 
-        employees.values().forEach(employee -> employee.setAccount(new Account(employee, 0)));
-
-        events.forEach(evt -> {
-            if (evt instanceof ChangedBalanceEvent event) {
-                Employee employee = employees.get(event.getUserID());
-                switch (event.getTransactionType()) {
-                    case DEPOSIT -> {
-                        employee.getAccount().deposit(event.getAmount());
-                        this.globalBalance += event.getAmount();
+            events.forEach(evt -> {
+                if (evt instanceof ChangedBalanceEvent event) {
+                    Employee employee = employees.get(event.getUserID());
+                    switch (event.getTransactionType()) {
+                        case DEPOSIT -> {
+                            employee.getAccount().deposit(event.getAmount());
+                            this.globalBalance += event.getAmount();
+                        }
+                        case WITHDRAW -> {
+                            if(employee.getAccount().getBalance() > event.getAmount()) {
+                                employee.getAccount().withdraw(event.getAmount());
+                                this.globalBalance -= event.getAmount();
+                            }
+                        }
                     }
-                    case WITHDRAW -> {
-                        employee.getAccount().withdraw(event.getAmount());
-                        this.globalBalance -= event.getAmount();
-                    }
+                } else {
+                    throw new UnsupportedOperationException("Event is not supported.");
                 }
-            } else {
-                throw new UnsupportedOperationException("Event is not supported.");
-            }
-        });
-
-        // Solution for subtask 2
-
-        /*
-        // restore global balance
-        try {
-            List<String> globalBalance = Files.readAllLines(Path.of(GLOBAL_BALANCE_FILE), StandardCharsets.UTF_8);
-            this.globalBalance = Double.parseDouble(globalBalance.getFirst());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        // restore accounts
-        try {
-            List<String> accounts = Files.readAllLines(Path.of(ACCOUNT_BALANCES_FILE), StandardCharsets.UTF_8);
-            accounts.forEach(account -> {
-                String[] data = account.split(",");
-                UUID uuid = UUID.fromString(data[0]);
-                double balance = Double.parseDouble(data[1]);
-
-                Employee employee = employees.get(uuid);
-                employee.setAccount(new Account(employee, balance));
             });
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
-         */
+        // solution for subtask 2
+        if(Util.EXERCISE_NUMBER == 2) {
+            // restore global balance
+            try {
+                List<String> globalBalance = Files.readAllLines(Path.of(GLOBAL_BALANCE_FILE), StandardCharsets.UTF_8);
+                this.globalBalance = Double.parseDouble(globalBalance.getFirst());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            // restore accounts
+            try {
+                List<String> accounts = Files.readAllLines(Path.of(ACCOUNT_BALANCES_FILE), StandardCharsets.UTF_8);
+                accounts.forEach(account -> {
+                    String[] data = account.split(",");
+                    UUID uuid = UUID.fromString(data[0]);
+                    double balance = Double.parseDouble(data[1]);
+
+                    Employee employee = employees.get(uuid);
+                    employee.setAccount(new Account(employee, balance));
+                });
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }
