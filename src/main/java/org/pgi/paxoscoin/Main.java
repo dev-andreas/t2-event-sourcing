@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.pgi.paxoscoin.commands.Command;
 import org.pgi.paxoscoin.commands.PayWageCommand;
 import org.pgi.paxoscoin.commands.ReadCardCommand;
+import org.pgi.paxoscoin.events.EventLog;
 import org.pgi.paxoscoin.worldmodel.Card;
 import org.pgi.paxoscoin.worldmodel.Employee;
 import org.pgi.paxoscoin.worldmodel.Terminal;
@@ -26,6 +27,9 @@ public class Main {
         commands.addAll(new CSVReader<PayWageCommand>(PayWageCommand.class).readFileAsListWithDependencies("csv/paywage.csv", cards, employees, terminals));
         // order commands by time
         commands.sort(Comparator.comparing(Command::getTime));
+
+        // reset event log
+        EventLog.reset();
 
         // start simulation
         PaxosIncSim simulation = new PaxosIncSim(commands, cards, employees, terminals);

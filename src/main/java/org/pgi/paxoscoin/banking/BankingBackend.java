@@ -3,6 +3,9 @@ package org.pgi.paxoscoin.banking;
 import org.pgi.paxoscoin.commands.Command;
 import org.pgi.paxoscoin.commands.PayWageCommand;
 import org.pgi.paxoscoin.commands.ReadCardCommand;
+import org.pgi.paxoscoin.events.ChangedBalanceEvent;
+import org.pgi.paxoscoin.events.Event;
+import org.pgi.paxoscoin.events.EventLog;
 import org.pgi.paxoscoin.exceptions.UnsupportedCommandException;
 import org.pgi.paxoscoin.worldmodel.Employee;
 
@@ -21,8 +24,8 @@ import java.util.UUID;
  */
 public class BankingBackend {
 
-    private static String ACCOUNT_BALANCES_FILE = "persistence/account_balances.csv";
-    private static String GLOBAL_BALANCE_FILE = "persistence/global_balance.csv";
+    private static final String ACCOUNT_BALANCES_FILE = "persistence/account_balances.csv";
+    private static final String GLOBAL_BALANCE_FILE = "persistence/global_balance.csv";
 
     private static BankingBackend instance;
     
@@ -63,6 +66,12 @@ public class BankingBackend {
             pwcommand.getEmployee().getAccount().deposit(pwcommand.getAmount());
             this.globalBalance += pwcommand.getAmount();
 
+            ChangedBalanceEvent event = new ChangedBalanceEvent(
+                    pwcommand.getEmployee().getId(),
+                    null, // command has no id
+                    TransactionType.DEPOSIT,
+                    pwcommand.getAmount());
+            EventLog.persist(event);
             // TODO: create ChangedBalanceEvent
 
         } else if(command instanceof ReadCardCommand) {
@@ -74,10 +83,14 @@ public class BankingBackend {
             }
             rccommand.getCard().getEmployee().getAccount().withdraw(rccommand.getAmount());
             this.globalBalance -= rccommand.getAmount();
+
+            ChangedBalanceEvent event = new ChangedBalanceEvent(
+                    rccommand.getCard().getEmployee().getId(),
+                    rccommand.getTerminal().getId(),
+                    TransactionType.WITHDRAW,
+                    rccommand.getAmount());
+            EventLog.persist(event);
             // TODO: create ChagedBalanceEvent
-
-
-
         } else {
             throw new UnsupportedCommandException();
         }
@@ -118,9 +131,6 @@ public class BankingBackend {
 
         // persist accounts
         try (FileWriter writer = new FileWriter(ACCOUNT_BALANCES_FILE, StandardCharsets.UTF_8)) {
-            // Write header
-            writer.append("Employee,Balance\n");
-
             employees.forEach((key, value) -> {
                 String line = value.getId() + "," + value.getAccount().getBalance() + "\n";
                 try {
@@ -141,6 +151,33 @@ public class BankingBackend {
     public void restoreCheckpoint(Map<UUID, Employee> employees) {
         // TODO: restore the last saved checkpoint
 
+        // solution for subtask 3
+
+        List<Event> events = EventLog.restoreEvent();
+
+        employees.values().forEach(employee -> employee.setAccount(new Account(employee, 0)));
+
+        events.forEach(evt -> {
+            if (evt instanceof ChangedBalanceEvent event) {
+                Employee employee = employees.get(event.getUserID());
+                switch (event.getTransactionType()) {
+                    case DEPOSIT -> {
+                        employee.getAccount().deposit(event.getAmount());
+                        this.globalBalance += event.getAmount();
+                    }
+                    case WITHDRAW -> {
+                        employee.getAccount().withdraw(event.getAmount());
+                        this.globalBalance -= event.getAmount();
+                    }
+                }
+            } else {
+                throw new UnsupportedOperationException("Event is not supported.");
+            }
+        });
+
+        // Solution for subtask 2
+
+        /*
         // restore global balance
         try {
             List<String> globalBalance = Files.readAllLines(Path.of(GLOBAL_BALANCE_FILE), StandardCharsets.UTF_8);
@@ -163,5 +200,6 @@ public class BankingBackend {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+         */
     }
 }
