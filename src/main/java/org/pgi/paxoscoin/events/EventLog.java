@@ -33,7 +33,7 @@ public class EventLog {
                 String str = CHANGED_BALANCE_EVENT_NAME + "," +
                         event.getTime() + "," +
                         event.getUserID() + "," +
-                        event.getTerminalID() + "," +
+                        (event.getTerminalID() == null ? "_" : event.getTerminalID()) + "," +
                         event.getTransactionType() + "," +
                         event.getAmount() + "\n";
                 Files.writeString(Path.of(GLOBAL_BALANCE_FILE), str, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
@@ -52,14 +52,15 @@ public class EventLog {
             List<String> lines = Files.readAllLines(Path.of(GLOBAL_BALANCE_FILE));
             lines.forEach(line -> {
                 String[] parts = line.split(",");
-                if (parts[1].equals(CHANGED_BALANCE_EVENT_NAME)) {
+                if (parts[0].equals(CHANGED_BALANCE_EVENT_NAME)) {
                     events.add(new ChangedBalanceEvent(
                             Instant.parse(parts[1]),
                             UUID.fromString(parts[2]),
-                            UUID.fromString(parts[3]),
+                            parts[3].equals("_") ? null : UUID.fromString(parts[3]),
                             TransactionType.valueOf(parts[4]),
                             Double.parseDouble(parts[5])));
                 } else {
+                    System.err.println(parts[1]);
                     throw new UnsupportedOperationException("Event is not supported.");
                 }
             });

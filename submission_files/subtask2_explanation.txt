@@ -1,0 +1,12 @@
+This is the output of the simulation:
+
+FATAL ERROR: power loss detected; global balance=€ 50,537,631
+Shutting down...
+Restarting systems...
+Restoring last saved system state...
+Restore successful; global balance=€ 50,573,672
+Continuing normal operation.
+Simulation finished; global balance=€ 98,860,506
+
+You can observe that the global balance before the power loss is slightly lower than after the power loss.
+This is likely due to the fact that all operations performed after the checkpoint are not persisted in the storage and, consequently, not restored.

@@ -13,6 +13,11 @@ ext {
     mainClassName = "org.pgi.paxoscoin.Main"
 }
 
+application {
+    mainClassName = 'org.pgi.paxoscoin.Main'
+}
+
+
 repositories {
     mavenCentral()
 }

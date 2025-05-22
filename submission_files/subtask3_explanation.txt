@@ -2,3 +2,17 @@ Employees can cheat the system by purchasing something after the last checkpoint
 This purchase won’t be persisted in the storage, and when the crash occurs, the purchase will be reset.
 However, to achieve this, employees must be aware that a crash will happen beforehand.
 For example, they could observe when the robot plugs itself in and do the purchase right before.
+
+This is the output for subtask 3:
+
+FATAL ERROR: power loss detected; global balance=€ 50,537,631
+Shutting down...
+Restarting systems...
+Restoring last saved system state...
+Restore successful; global balance=€ 50,537,631
+Continuing normal operation.
+Simulation finished; global balance=€ 98,824,465
+
+We observe that the global balance remains relatively unchanged before and after the crash
+This is because every deposit and withdrawal is immediately recorded and persisted.
+Consequently, if a crash were to occur, all transactions can be restored.

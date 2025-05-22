@@ -153,6 +153,7 @@ public class BankingBackend {
 
         // solution for subtask 3
 
+
         List<Event> events = EventLog.restoreEvent();
 
         employees.values().forEach(employee -> employee.setAccount(new Account(employee, 0)));
@@ -174,6 +175,7 @@ public class BankingBackend {
                 throw new UnsupportedOperationException("Event is not supported.");
             }
         });
+
 
         // Solution for subtask 2
 
