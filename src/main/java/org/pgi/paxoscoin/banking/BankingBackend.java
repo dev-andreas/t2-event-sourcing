@@ -80,7 +80,7 @@ public class BankingBackend {
             ReadCardCommand rccommand = (ReadCardCommand) command;
 
             // FIX for the card exploit
-            //if(rccommand.getAmount() < 0) rccommand = new ReadCardCommand(rccommand.getTerminal(), rccommand.getCard(), rccommand.getTime(), -rccommand.getAmount());
+            if(rccommand.getAmount() < 0) rccommand = new ReadCardCommand(rccommand.getTerminal(), rccommand.getCard(), rccommand.getTime(), -rccommand.getAmount());
 
             // reject any read card commands, if the current account balance is not sufficing
             if (rccommand.getAmount() > rccommand.getCard().getEmployee().getAccount().getBalance()) {
